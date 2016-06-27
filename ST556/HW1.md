@@ -1,0 +1,130 @@
+---
+title: "Homework 1"
+author: "Brian Wang"
+date: "June 25, 2016"
+output: pdf_document
+---
+
+#Goal
+This homework is to use R to write programs to address the following questions regrading the die-rolling.
+
+#Questions
+####2. Using R, write programs to address the following questions regarding the die-rolling. Use a seed for each question/program, so that another user could reproduce your results if necessary
+
+a. Simulate the rolling of $n$ = 3 fair, six-sided dice.
+
+```{r}
+#set sample size = 3
+n = 3
+set.seed(111)
+#simulate rolling 3 dice using random sampling
+result3Dice = sample(x = 1:6, n, replace = T)
+print(result3Dice)
+```
+
+b. Estimate the chance, when rolling $n$ = 3 dice, that they sum to 9. To address this question, simulate $nsim$ = 10000, rolls of $n$ = 3 dice, computing the sum for each roll.
+
+```{r}
+#set up number of simulation = 10000
+nsim = 10000
+set.seed(222)
+#simulate rolling 3 dice with 10000 times
+result3DiceSim = replicate(nsim, sample(x = 1:6, n, replace = T))
+#calculate sum of each roll
+colSum3 = apply(result3DiceSim, 2, sum)
+#calculate the probability of getting sum of 3
+ps9 = round(table(colSum3)["9"] / nsim, 4)
+print(paste("The chance of the sum of 9 from 3 dice is ", ps9, sep = ""))
+```
+
+c. Produce a histogram for sums of 3 dice and include it with this homework assignment.
+
+```{r}
+#load ggplot2 package
+suppressMessages(library(ggplot2))
+#transform colSum from matrix to data frame
+colSum3 = as.data.frame(colSum3)
+#plot histogram of all sums from 10000 simulation
+g = ggplot(data = colSum3, aes(colSum3)) + 
+        geom_histogram(fill = "blue") +
+        ggtitle("Histogram of sum of 3 dice for nsim = 10000") +
+        xlab("Sum of 3 dice") + 
+        ylab("Frequency")
+suppressMessages(print(g))
+```
+
+d. The *Monte Carlo Standard Error* (MCSE) for a sample proportion, $\hat p$, like the one computed in part (b) is given by the expression, $$SE(\hat p) = \sqrt{\hat p(1 - \hat p) \over n}$$
+where $\hat p$ is the sample proportion being used to estimate an unknown probability $p$. Report the MCSE for the estimated reported in part (b).
+
+```{r}
+#calculate standard error of sampling distribution
+SE = round(sqrt((ps9 * (1 - ps9)) / n), 4)
+print(paste("The standard error (SE) for the distribution of sample proportion is ", SE, sep = ""))
+```
+e. Use the Central Limit Theorem to analytically (i.e. no simulation) estimate the chance of getting a sum of 9 when rolling three dice. To do this let $\sum_{1}^3 Y_i$ denote the sum of three dice. We want $$P(\sum_{1}^3 Y_i = 9) \approx P(8.5 < \sum_{1}^3Yi < 9.5)$$
+where $E(\sum_{1}^3) Yi) = 3 \times 3.5$ and $\sqrt{Var(\sum_{1}^3 Yi)} = \sqrt{3 \times 35 / 12}$. The answer should be close to that from part (b).
+
+```{r}
+#calculate expected value for rolling one die
+E1 = rep(1/6, 6) %*% (1:6)
+#calculate expected value for three dice
+E3 = 3 * E1
+#calculate variance for rolling one die
+Var1 = rep(1/6, 6) %*% (((1:6) - E1)^2)
+#calculate variance for rolling three dice
+Var3 = 3 * Var1
+#calculate standard deviation for rolling three dice
+sd3 = sqrt(Var3)
+#calculate the probability of getting sum of 9
+p8.5 = pnorm(8.5, mean = E3, sd = sd3)
+p9.5 = pnorm(9.5, mean = E3, sd = sd3)
+pc9 = round(p9.5 - p8.5, 4)
+#compare probability from simulation and mathmatical calculation
+comp = data.frame("Simulation" = ps9, "Calculation" = pc9, row.names = "Probability")
+print(comp)
+```
+
+f. Repeat parts (b) and (e) by considering the chance that $n$ = 5 dice leads to a sum of 15.
+
+```{r}
+set.seed(333)
+#simulate rolling 5 dice for 10000 times
+result5DiceSim = replicate(nsim, sample(1:6, 5, replace = T))
+#calculate the sum from each roll
+colSum5 = apply(result5DiceSim, 2, sum)
+#calculate the probability of getting sum of 15
+ps15 = round(table(colSum5)["15"] / nsim, 4)
+#calculate the expected value for rolling 5 dice
+E5 = 5 * E1
+#calculate the variance for rolling 5 dice
+Var5 = 5 * Var1
+#calculate the standard deviation for rolling 5 dice
+sd5 = sqrt(Var5)
+#calculate the probability of getting sum of 15 mathmatically
+p14.5 = pnorm(14.5, mean = E5, sd = sd5)
+p15.5 = pnorm(15.5, mean = E5, sd = sd5)
+pc15 = round(p15.5 - p14.5, 4)
+#compare the probability from simulation and mathmatical calculation
+comp2 = data.frame("Simulation" = ps15, "Calculation" = pc15, row.names = "Probability")
+print(comp2)
+```
+
+####3. Consider De Mere's first problem, which requires estimation of the chance of rolling at least one $1$ in 4 rolls of a fair six-sided die
+
+a. Using the mean() function, write two lines of R code that will generate a Monte Carlo (simulation-based) estimate of this probability from $n$ = 10000 rolls of four fair six-sided dice.
+
+```{r}
+set.seed(555)
+#simulate and calculate the probability of getting at least one 1 from rolling 4 dice
+print(paste("The probability of getting at least one 1 in four rolls of a fair die is ", 
+            mean(apply(replicate(nsim, sample(1:6, size = 4, replace = T)), 2, min) == 1), sep = ""))
+```
+
+b. Using the prop.test() function, write two lines of R code that will generate a 95% confidence interval for this probability using simulation. Use a variable **nsims** and let the first line define a value of 10000 for nsims.
+
+```{r}
+set.seed(555)
+#perform proportion test and calculate 95% confidence interval
+prop.test(sum(apply(replicate(nsim, sample(1:6, size = 4, replace = T)), 2, min) == 1), 
+          nsim, p = 0.5, alternative = "greater")
+```
