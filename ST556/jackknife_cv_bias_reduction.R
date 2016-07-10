@@ -36,9 +36,9 @@ cv.bias.rdct = function (nsim, n, u, std, ...) {
         cv.sample.jackknife.se = sd(cv.sample.jackknife) / sqrt(nsim)
         
         #print results
-        cat(" normal data with cv = 0.2, sample CV \n")
+        cat(paste(" normal data with cv = ", coef.var, " sample CV \n", sep = ""))
         cat(paste("mean of CVs = ", cv.sample.mean, "SE = ", cv.sample.se, "\n"))
-        cat(" normal data with cv = 0.2, jackknife CV \n")
+        cat(paste(" normal data with cv = ", coef.var, " jackknife CV \n", sep = ""))
         cat(paste("mean of CVs = ", cv.sample.jackknife.mean, "SE = ", cv.sample.jackknife.se, "\n"))
         
         #preprocess data set for plotting
