@@ -1,0 +1,212 @@
+---
+title: "Homework 2"
+author: "Brian Wang"
+date: "June 30, 2016"
+output: html_document
+---
+
+#Purpose
+This homework is to use R and SAS to write programs to address the following quesions.
+
+#Questions
+####1. Recall that if $F_Y(y)$ denotes the cumulative distribution function (CDF) of a random variable (RV) of interest and $U$ is a RV uniformity distributed between 0 and 1, then $F_Y^{-1}(U)$ is a RV with CDF $F_Y(y)$ where $F_Y^{-1}$ is the inverse of $F_Y(y)$, or the so-called *quantile function*.
+
+a. With a seed of 123, use R to generate a random sample of $n$ = 10 independent uniformly distributed RVs. Report the sample here.
+
+```{r}
+#assign sample size n = 10
+set.seed(123)
+n = 10
+#generate uniformly distributed random variables
+uniSample = runif(n, min = 0, max = 1)
+print(uniSample)
+```
+
+b. Using the data from part (a) and the `qnorm` function in R, and the result above, gererate a random sample of size $n$ = 10 from the normal distribution with mean 80 and standard deviation 5. Report the sample here.
+
+```{r}
+
+normSample = qnorm(uniSample, mean = 80, sd = 5)
+print(matrix(data = c(uniSample, normSample), nrow = 2, ncol = 10, byrow = T, 
+             dimnames = list(c("Uniform RV(0-1)", "Normal RV(u=80, sd=5)"))))
+```
+
+c. Using the data from part (a) and the result above, generate a random sample of random variables $Y_1,...,Y_{10}$ having CDF and inverse CDF given below: 
+
+\begin{align*}
+F(y) &=
+\begin{cases}
+0 & \text{if }y<0\\
+1 - e^{-y/5} & \text{if }y \ge 0\\
+\end{cases}\\
+F^{-1}(u) &= -5\log_e(1-u) \quad(\text{ for } (0<u<1))
+\end{align*}
+Report the sample here. (Note that it does not need $$ at beginning and the end for displaying formulas in pdf output)
+
+```{r}
+#create a random number generator to create random variables that satisfy CDF of F(y)
+CDF = function(n) {
+        y = runif(n)
+        for (i in 1:n) {
+                if (y[i] < 0) y[i] = 0
+                else y[i] = 1 - exp((-y[i])/5)
+        }
+        return(y)
+}
+#create an inverse of F(y), which is F(u)
+invCDF = function(u) {
+        n = length(u)
+        for(i in 1:n) if(u[i] > 0 & u[i] < 1) u[i] = (-5) * log(1 - u[i])
+        return(u)
+}
+#using the samples created by part(a) to generate new random variables with CDF of F(y) 
+#and inverse of F(y)
+set.seed(123)
+rSample = CDF(10)
+rSample2 = invCDF(rSample)
+print(matrix(c(rSample, rSample2, uniSample), nrow = 3, ncol = 10, byrow = T, 
+             dimnames = list(c("F(y)", "Inverse_F(u)", "Part(a) = y"))))
+```
+
+####2. Consider the R function below to plot the inverse CDF function from problem 1.(c) 
+    plot.inverse.cdf <- function(u) {
+            y <- -5*log(1-u)
+            plot(sort(u), sort(y))
+    }
+    
+a. Use this function to obtain a plot of the inverse CDF applied to the random sample you generated in part 1.(a).
+
+```{r}
+plot.inverse.cdf <- function(u) {
+            y <- -5*log(1-u)
+            plot(sort(u), sort(y))
+}
+plot.inverse.cdf(uniSample)
+```
+
+b. Modify the function so that it will accommodate any kind of line type argument, such as the `type="b"` option that plots open circles connected by line segments. (Hint: use the ellipsis (...)). Include the code here, or as a file with filename of the form "*.r".
+
+```{r}
+plot.inverse.cdf <- function(u, ...) {
+            y <- -5*log(1-u)
+            plot(sort(u), sort(y), ...)
+}
+```
+
+c. Reproduce the plot in part(a) with `type="b"` and triple the usual line width (`lwd=3`).
+
+```{r}
+plot.inverse.cdf(uniSample, type = "b", lwd = 3)
+```
+
+####3. Consider the `iris` dataset in R.
+
+a. Use R to compute the sample coefficient of variation of sepal length, separately for each of the three species of iris in the `iris` dataset.
+
+```{r}
+#create a function to calculate coefficient of variabtion
+cv_fcn = function(x) sd(x) / abs(mean(x))
+#calculate the cv of sepal length by species
+cv = by(data = iris$Sepal.Length, iris$Species, cv_fcn)
+print(cv)
+```
+
+b. Report the jackknife estimate of the coefficient of variation of sepal length for the *virginica* species.
+
+```{r}
+#create a function that calculates jackknife estimates
+jkKnife = function(y, fcn) {
+        n = length(y)
+        all_holdout = vector()
+        for(i in 1:n) {
+                holdout = fcn(y[-i]) 
+                all_holdout = c(all_holdout, holdout)
+        }
+        jk_estimate = n * fcn(y) - (n - 1) * mean(all_holdout)
+        jk_se = sqrt(((n - 1)/n) * sum((all_holdout - fcn(y))^2))
+        jk_bias = fcn(y) - jk_estimate
+        result = data.frame("est" = jk_estimate, "se" = jk_se, "bias" = jk_bias)
+        return(result)
+}
+#calculate jackknife estimates of coefficient of variation 
+#for the sepal length of the species of virginica
+allResult = jkKnife(iris[iris$Species == "virginica", ]$Sepal.Length, cv_fcn)
+print(paste("The jackknife estimate of the CV of sepal length for the virginica species = ", 
+            round(allResult$est, 8), sep = ""))
+```
+
+c. Report a standard error of the estimate given in part(b).
+
+```{r}
+print(paste("The standard error of the estimate given in part(b) = ", 
+            round(allResult$se, 8), sep = ""))
+```
+
+####4. Consider the SAS program below
+
+    data a;
+        do i=1 to 5; a=rannor(i); output; end;
+    run;
+    data b;
+        do i=i to 5; b=rannor(i+1); output; end;
+    run;
+    data c; 
+        do i=1 to 5; c=rannor(1); output; end;
+    run;
+    data a113;
+        merge a b c;
+    run;
+    proc print data=a123; run;
+    
+  Which, if any, of the following statement are true?
+  
+  a. a = b for every observation
+  
+  b. a = c for every observation
+  
+  c. b = c for every observation
+  
+  d. a = b = c for every observation
+  
+  e. there will be no equality among a, b, and c for any observation
+  
+  f. none of the statements are true
+  
+
+    ###Ans: The correct statement is b. (a = c for every observation)
+
+
+####5. If the following program is run,
+
+    options ls=75 nocenter;
+    data d;
+        retain seed1 seed2 1;
+        do i=1 to 5;
+            call rannor(seed1, d1);
+            call rannor(seed2, d2);
+            d3=rannor(seed1);
+            output;
+            if i=4 then seed2=4;
+        end;
+    run;
+    proc print; run;
+    
+a. List the variable that will be in the data set call "d".
+
+    ###Ans: Obs seed1 seed2 i d1 d2 d3
+
+b. Will any of the values of `d3` be equal to any of the values of `d2`? If so, which one?
+
+    ###Ans: Yes, there will be 4 values being equal in d2 and d3 with 1 offset of observation since for the first iteration of d3 and the second iteration of d2 use the same seed value, which is the updated value of seed1 from the first iteration.
+
+
+c. Will any of the values of `d1` be equal to any of the values of `d2`? If so, which one?
+
+    ###Ans: Yes, the first 4 observations of d1 and d2 are equal since they start using the same seed = 1 until seed2 is explicitly changed to 4 after the 4th iteration. So the 5th observation of d2 uses normal random generator with seed2 = 4.
+
+
+d. Will any of the values of either `seed1` or `seed2` be equal to 4 for any of the observations? If so, which ones?
+
+    ###Ans: No, there will be no values of either seed1 or seed2 equal to 4 for any of the observations since the output statement is after the if statement. So the assignment of seed2=4 will not be outputted in the data set.
+
+
