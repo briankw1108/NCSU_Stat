@@ -38,9 +38,9 @@ cv.bias.rdct = function (nsim, n, u, ...) {
         bias = cv.sample.mean - cv.sample.jackknife.mean
         
         #print results
-        cat(paste(" normal data with cv = ", coef.var, " sample CV \n", sep = ""))
+        cat(paste(" exponential data with cv = ", coef.var, " sample CV \n", sep = ""))
         cat(paste("mean of CVs = ", cv.sample.mean, "SE = ", cv.sample.se, "\n"))
-        cat(paste(" normal data with cv = ", coef.var, " jackknife CV \n", sep = ""))
+        cat(paste(" exponential data with cv = ", coef.var, " jackknife CV \n", sep = ""))
         cat(paste("mean of CVs = ", cv.sample.jackknife.mean, "SE = ", cv.sample.jackknife.se, "\n"))
         cat(paste(" jackknife bias = ", bias, sep = ""))
         
