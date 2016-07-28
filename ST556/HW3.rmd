@@ -1,0 +1,256 @@
+---
+title: "Homework 3"
+author: "Brian Wang"
+date: "July 11, 2016"
+output: pdf_document
+---
+
+#Purpose
+This homework is to use SAS to write programs to address the following questions.
+
+#Questions
+####1. Consider the following SAS program:
+
+    %let candidate1=        Matt Damon        ;
+    %let candidate2="       Bryan Cranston   ";
+    %put the #1 candidate is (drumroll) ... &candidate1;
+    %put;
+    %put the #2 candidate is (drumroll) ... &candidate2;
+    
+(a) What will the text in the log that this code produces look like, precisely? Please take care to indicate extra spaces, if any.
+
+***Ans:***
+
+    1    %let candidate1=        Matt Damon        ;
+    2    %let candidate2="       Bryan Cranston   ";
+    3    %put the #1 candidate is (drumroll) ... &candidate1;
+    the #1 candidate is (drumroll) ... Matt Damon`
+    4    %put;
+    
+    5    %put the #2 candidate is (drumroll) ... &candidate2;
+    the #2 candidate is (drumroll) ... "       Bryan Cranston   "
+
+(b) In which column number does the text produced by the first `%PUT` statement begin?
+
+***Ans: The text produced by the first*** **`%PUT`** ***statement will start at column 1.***
+
+(c) In which column number does the text produced by the third `%PUT` statement begin?
+
+***Ans: The text produced by the thrid*** **`%PUT`** ***statement will start at column 1.***
+
+(d) What doest the second `%PUT` statement do?
+
+***Ans: The second*** **`%PUT`** ***statement puts a blank at the next line in log.***
+
+(e) Give the name and type and length of the macro variable created by the first `%LET` statement.
+
+***Ans:***
+
+* name: candidate1
+* type: text and user-defined
+* length: 10
+
+####2. Provide a single macro statement that will resolve all user-defined macro variables and print their values in the log.\
+\
+***Ans:*** **`%put _user_;`**
+    
+####3. Which SAS component will execute the statement you specify in problem 2?
+(a) The input stack.
+(b) The compiler.
+(c) The macro processor.
+(d) The program data vector.
+
+***Ans: (c) The Macro Processor will execute the statement specified in problem 2.***
+
+####4. When macro triggers send code to the macro processor, the macro processor does its work when?
+(a) Before compilation and execution of SAS code.
+(b) After compilation and before execution of SAS code.
+(c) After compilation and execution of SAS code.
+
+***Ans: (a) Before compilation and execution of SAS code.***
+
+####5. When a macro trigger directs code to the macro processor, the macro processor continues requesting tokens until what special token is encountered?\
+\
+***Ans: A semicolon.***
+
+####6. What global options can be used to specify whether or not a note will be written to the log each time the value of a macro variable is resolved? (There are two options.) What is the default setting?\
+\
+***Ans:***
+
+    options symbolgen; *turn on this option;
+    options nosymbolgen; *turn off this option, and it is the default setting;
+    
+####7. True or False:
+(a) A macro variable name must start with a letter. ***False***
+(b) A macro variable cannot start with a number. ***True***
+(c) `ST556` is a valid name for macro variable. ***True***\
+    `year` is a valid name for macro variable. ***True***\
+    `_misc_` is a valid name for macro variable. ***True***\
+    `4ever_young` is a valid name for macro variable. ***False***
+(d) SAS stores all macro variables as text, even if quotes are not used to specify the value. ***True***
+
+####8. Consider the `orion.customer_dim` dataset and the code below ...
+
+    *m102e05;
+    title; footnote;
+    
+    proc print data=orion.customer_dim;
+        var Customer_Name Customer_Gender Customer_Age;
+        where Customer_Group contains 'Gold';
+        title 'Gold Customer';
+    run;
+    
+(a) There are three values of the variable `Customer_Group`. Which group is the least abundant (has the smallest count) in the dataset?
+
+***Ans: The group of Internet/Catalog Customers, which has only eight members, is the least abundant in the data set.*** 
+
+(b) Modify the code above so that it prints names, genders and ages of customers in the least abundant group, including an appropriate title.
+
+***Ans:***
+
+    %let cus=customer_;
+    
+    proc print data=orion.&cus.dim;
+        var &cus.name &cus.gender &cus.age;
+        where &cus.group contains "Internet";
+        title "The List of Member in the Group of";
+        title2 "Internet/Catalog Customers";
+    run; title2;
+
+(c) Precede the **`PROC PRINT`** you used for part(b) with the following statement
+    
+    `%let group=Internet;`\
+    \
+and modify the code so that it prints only those observations in which the `customer_group` variable contains the value of the newly created macro variable, "group".
+
+***Ans:***
+
+    %let cus=customer_;
+    %let group=Internet;
+    
+    proc print data=orion.&cus.dim;
+        var &cus.name &cus.gender &cus.age;
+        where &cus.group contains "&group";
+        title "The List of Member in the Group of";
+        title2 "&group/Catalog Customers";
+    run; title2;
+
+(d) Is the value of the macro variable "group" case-sensitive? Try to rerun the program you wrote for part(d) using
+
+    `%let group=internet;`\
+    \
+Does it print the desired group?
+
+***Ans: No, it does not print the desired group. The value of the macro variable is case-sensitive.***
+
+(e) What macro statement can you use to delete the macro variable `group` after the report has been generated?
+
+***Ans:*** **`%symdel group;`**
+
+####9. Consider again the problems described in problem 8.
+(a) Modify the report produced in part(8b) so that within the displayed title, every letter of the least abundant group is capitalized.
+
+***Ans: Assuming that this question follows all the macro variables created previously.*** 
+    
+    %let cus=customer_;
+    %let group=Internet;
+    %let title_text=The List of Member in the Group of &group/Catalog Customers;
+    title "%upcase(&title_text)";
+    
+    proc print ... *same proc print step in part 8(c);
+
+(b) Modify the report in part(8b) so that within the displayed title, every letter of the least abundant group is capitalized. However, you cannot use the `%upcase` macro function. You must use the regular `upcase` function.
+
+***Ans: Assuming that this question follows all the macro variables created previously.***
+
+    %let cus=customer_;
+    %let group=Internet;
+    %let title_text=The List of Member in the Group of &group/Catalog Customers;
+    title "%sysfunc(upcase(&title_text))";
+    
+    proc print ... *same proc print step in part 8(c);
+
+(c) Modify the report in part(8b) so that the value of the `least` variable is unmodified, but followed by three exclamation points so that it looks like this:
+
+    `The least abundant Customer Group is Internet/Catalog Customers!!!`
+    
+***Ans: Assuming that this question follows all the macro variables created previously.***
+
+    %let cus=customer_;
+    %let group=Internet;
+    %let least=The least abundant Customer Group is &group/Catalog Customers;
+    title "&least!!!";
+    
+    proc print ... *same proc print step in part 8(c);
+
+####10. Add a macro statement that will extract the number of the dataset names (5 and 9) and send the sum of these numbers to the log. (The answer should be 14.)
+
+    %let dsn1=shoes5;
+    %let dsn2=shoes9;
+    
+***Ans:*** **`%put %eval(%substr(&dsn1,6,1)+%substr(&dsn2,6,1));`**
+    
+####11. A text file is names "records2010.dat". (It is available online if you want to test your code.) Suppose you wish to use an `infile` statement to open this file and read in the data using a `DATA` step like the following
+
+    %let year=2010;
+    data records&year;
+        infile "(year answer goes here)" firstobs=3 dsd;
+        length team %15;
+        input team $ w l t wpct pf pa; *w=wins l=losses;
+    run;
+    
+(a) How must you specify the name of the text file so that it correctly references the macro variable `year`?
+
+***Ans:*** **`infile "mypath/records&year..dat";`**
+   
+(b) Add a `%LET` statement before the following code so that it prints only those teams that won at least 12 games:
+
+    `proc print data=one;`\
+        `title "teams winning at least &wincut games";`\
+        `where w >= &wincut;`\
+        `var team w l t wpct pf pa;`\
+    `run;`
+
+***Ans:***
+
+    %let wincut=12;
+    proc print data=one;
+        title "teams winning at least &wincut games";
+        where w >= &wincut;
+        var team w l t wpct pf pa;
+    run;
+    
+(c) Using all three of the following macro variable assignments, modify the `WHERE` statement and `TITLE` statements above so that it produces a report of only those teams winning 4 or fewer games, with an appropriate title
+
+    `%let wincut=4;`\
+    `%let gverb= winning at most;`\
+    `%let direct= <= ;`
+    
+***Ans:***
+
+    %let wincut=4;
+    %let gverb= winning at most;
+    %let direct= <= ;
+    proc print data=one;
+        title "teams &gverb &wincut games";
+        where w &direct &wincut;
+        var team w l t wpct pf pa;
+    run;
+    
+(d) At the end of the program, add a macro statement (`%PUT`) that references an automatic macro variable and sends the two-level name of the most recently created SAS data set to the log.
+
+***Ans:*** **`%put &syslast;`**
+
+(e) Use the `%scan` macro function (twice) to partition this two-level name into its two components and write each to a separate line in the log,\ The log from parts (d) and (e) should look something like the following:
+
+    `most recently created data set: (SAS will supply)`\
+    `the first component of this two-level name is (SAS will supply)`\
+    `the second component of this two-level name is (SAS will supply)`
+    
+***Ans:***
+
+    %put most recently created data set: &syslast;
+    %put the first component of this two-level name is %scan(&syslast,1);
+    %put the second component of this two-level name is %scan(&syslast,2);
+    
+
