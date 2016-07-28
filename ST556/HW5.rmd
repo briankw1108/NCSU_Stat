@@ -1,0 +1,250 @@
+---
+title: "Homework 5"
+author: "Brian Wang"
+date: "July 23, 2016"
+output: pdf_document
+---
+
+#Purpose
+This homework is to use SAS to write programs to address the following questions.
+
+#Questions
+####1. Consider `orion.order_fact` and `orion.product_dim` and 
+(a) Use `describe table` to discover the names and attributes of all columns in `orion.order_fact`. Include here the relevant information from the SAS log. (Do the same for `orion.product_dim` through you only need to inspect the log and not include it here.)
+
+***Ans:***
+
+    proc sql;
+        describe table orion.order_fact;
+    quit;
+    
+***Log:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW5/Capture1.png)
+
+(b) Is it possible to get attribute information from both data sets in part(a) with a single `describe table` statement in `PROC SQL`? If yes, include the code.
+
+***Ans: Yes.***
+
+    proc sql;
+        describe table orion.order_fact, orion.product_dim;
+    quit;
+    
+(c) Print the first five rows of `orion.product_dim` after sorting by `Product ID`, selecting only those columns with these labels: `Product ID`, `Product Category` and `Product Name`.
+    
+***Ans:***
+
+    proc sql outobs=5;
+        select product_id label="Product ID", 
+               product_category label="Product Category", 
+               product_name label="Product Name"
+            from orion.product_dim
+            order by product_id;
+    quit;
+    
+***Output:***
+
+![](C:/Users/u213493/Desktop/NC_State/ST556/HW5/Capture2.png)
+
+(d) How many rows are in `orion.order_fact`?
+
+***Ans: 617 rows (observations).***
+
+    proc sql;
+        select count(*) from orion.order_fact;
+    quit;
+
+(e) How many different values of the column `order_id` are there in `orion.order_fact`?
+
+***Ans: 490 different values in the column*** **`order_id`**.
+
+    proc sql;
+        select count(distinct order_id) as Order_ID
+            from orion.order_fact;
+    quit;
+    
+(f) How many different values of the column `discount` are there in `orion.order_fact`?
+
+***Ans: 2 different values in column*** **`discount`**.
+
+    proc sql;
+        select count(distinct discount) as Discount
+            from orion.order_fact;
+    quit;
+    
+####2. Modify the program below (s102a05) so that only those employees with first names starting with *J* are selected in the query.
+
+    *** s102a05 ***;
+    proc sql feedback;
+    select Employee_Name, Employee_ID
+    from orion.employee_addresses
+    quit;
+    
+***Ans:***
+
+    proc sql feedback;
+        select employee_name, employee_id
+            from orion.employee_addresses
+            where scan(employee_name, 2) like "J%";
+    quit;
+    
+####3. Use the table entitled `"sal2015.sas7bdat"` available on the moodle page. Create and use a library entitled `"mlb"` for use in this exercise. Run the following code.
+
+    proc sql feedback;
+        select * from mlb.sal2015;
+    run;
+    proc sql feedback;
+        select * from mlb.sal2015;
+    quit;
+    proc sql;
+        describe table mlb.sal2015;
+    quit;
+    
+(a) What message was included in the log because of the use of the `run;` statement?
+
+***Ans:***
+
+![](C:/Users/u213493/Desktop/NC_State/ST556/HW5/Capture3.PNG)
+
+(b) What variable type is the column named `opening`? Is it character? numeric?
+
+***Ans:*** **`opening`** ***is a numeric variable.***
+
+(c) Describe and contrast the function of the `feedback` option and the `DESCRIBE` statement in `PROC SQL`.
+
+***Ans:*** 
+**`feedback`** ***option expands a*** **`SELECT *`** ***statement into the list of columns that the statement represents.***
+**`DESCRIBE`** ***statement displays the content of the table such as variable names and what types of value they contain.***
+**`feedback`** ***option displays the library and varialbe without displaying what type of value it contains.***
+ 
+(d) Modify the style of the middle `proc sql` code (three lines) by putting all SAS syntax into upper case and all user-specified names in lower case. Include here your modified (but equivalent!) code.
+
+***Ans:***
+
+    PROC SQL FEEDBACK;
+        SELECT * FROM mlb.sal2015;
+    QUIT;
+
+(e) Write an SQL query that produces a table with two columns: team name and opening salary (unformatted).
+
+***Ans:***
+
+    proc sql;
+        select team, opening from mlb.sal2015; 
+    quit;
+
+(f) Modify your query so that the column with opening salary , which is in the hundreds of millions of samoleans (dollars), has the heading "Opening Salary" and has a format of the form $xxx,xxx,xxx.
+
+***Ans:***
+
+    proc sql;
+        select team, opening label="Opening Salary" format=dollar12.
+            from mlb.sal2015;
+    quit;
+
+(g) Modify your code so that the teams are ordered by opening salary, in increasing order, so that the (dis)Astros come first, (for once). Include an appropriate title to the report created by the query.
+
+***Ans:***
+
+    proc sql;
+        select team, opening label="Opening Salary" format=dollar12.
+            from mlb.sal2015
+        order by opening;
+    quit;
+
+####4. Explain what a left outer join is.\
+
+***Ans: It preserves the unmatched row from the first(left) table, joining them with a NULL row in the shape of the second(right) table.***
+
+####5. How many rows would be in a Cartesian join of two tables A and B, if the number of respective rows is $r_A$ = 15, $r_B$ = 100?\
+
+***Ans:*** $r_A \times r_B$ = 15 $\times$ 100 = 1500 ***rows.***
+
+####6. Using an inner join with `orion.product_dim` and `orion.order_fact`, compute the profit for each of the three items sold at a discount and generate the following table:
+
+![](C:/Users/u213493/Desktop/NC_State/ST556/HW5/Capture4.PNG)
+
+`select (other column here), (total_retail_price - quantity*costprice_per_unit)`
+`'total profit', discount 'disc'`
+`(...more code...)`
+
+***Ans:***
+
+    proc sql;
+        select o.product_id, product_name, 
+               (total_retail_price-quantity*costprice_per_unit) as total_profit "Total Profit",
+               discount "Disc"
+        from orion.order_fact as o, orion.product_dim as p
+        where o.product_id = p.product_id
+        /*
+        alternative way
+        from orion.order_fact as o inner join orion.product_dim as p 
+        on o.product_id = p.product_id
+        */
+        and discount is not missing
+        order by o.product_id desc;
+    quit;
+
+***Output:***
+
+![](C:/Users/u213493/Desktop/NC_State/ST556/HW5/Capture5.PNG)
+####7. Use the data set `mlb2010.sas7bdat` to list Major League Baseball (MLB) teams that 
+(a) scored fewer runs (`rs` variable) than average in 2010 (Suggestion: SAS Doc indicates that the `WHERE` clause may not be used with a summary function that specifies only one column (e.g. `where r < avg(rs)`). Try the `HAVING` clause.)
+
+***Ans:***
+    
+    *set library path to where the mlb2010.sas7dat is stored;
+    libname mlb "path";
+    
+    *generate report;
+    proc sql;
+        select team from mlb.mlb2010
+        where rs < (select avg(rs) from mlb.mlb2010);
+        /*
+        alternative way
+        having rs < avg(rs);
+        */
+    quit;
+
+(b) scored fewer runs than the average in their league (AL, NL) in 2010. (Suggestion: calculate average by group using the `avg` function and the `group by` clause and select desired teams using `having` clause. This is not a hard problem and a subquery is not necessary.)
+
+***Ans:***
+
+    proc sql;
+        select team, league, rs, avg(rs) as Rs_Avg from mlb.mlb2010
+        group by league
+        having rs < avg(rs)
+    quit;
+
+(c) Also, reproduce the table in part(b) using constant text, "<", in an appropriate place to help a reader better see the relationship between a team's runs and the league average.
+
+***Ans:***
+
+    proc sql;
+        select team, league, rs "Run", "<", avg(rs) "Run Avg"
+            from mlb.mlb2010
+        group by league
+        having rs < avg(rs);
+    quit;
+
+####8. Use these tables: `orion.employee_addresses` and `orion.staff` to create a report of all trainees and temporary workers at Orion. For each trainee or temporary worker, include employee ID, name, job title and manager ID and name. Sort by manager name and then employee name.
+
+***Ans:***
+
+    *look up unique job titles first;
+    proc sql;
+        select distinct job_title from orion.staff;
+    quit;
+    
+    *generate report;
+    proc sql;
+        select a.employee_id "ID", a.employee_name "Employee Name", job_title "Job Title", 
+               manager_id "Manager ID", ma.employee_name "Manager Name"
+        from orion.employee_addresses as a,
+             orion.employee_addresses as ma,
+             orion.staff as s
+        where a.employee_id = s.employee_id
+        and s.manager_id = ma.employee_id
+        having job_title in ("Trainee", "Temp. Sales Rep.")
+        order by ma.employee_name, a.employee_name;
+    quit;
