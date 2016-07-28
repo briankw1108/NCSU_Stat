@@ -1,0 +1,411 @@
+---
+title: "Homework 4"
+author: "Brian Wang"
+date: "July 16, 2016"
+output: pdf_document
+---
+
+#Purpose
+This homework is to use SAS to write programs to address the following questions.
+
+#Questions
+####1. The first argument(s) of the `sysfunc` macro function is/are the function(s) you'd like execute. `sysfunc` also allows for an optional last argument which may be used to apply a format to the result of the executed function...\
+What day of the week were you born? Use the `sysfunc` macro function, along with the `mdy` SAS function and the `weekdate.` format to send the week on which you were born to the log. If you have privacy concerns, you may pick your favorite celebrity. For example, Emmylou Harris was born on April 2, 1947, a Wednesday.\
+\
+***Ans:***
+
+    %let birth=%sysfunc(mdy(11,8,1979), weekdate.);
+    %put I was born on &birth;
+    
+####2. In a **defined macro**, the statement used to begin the definition of a macro to be called *mymacro* is
+(a) &start mymacro;
+(b) %start mymacro;
+(c) %begin mymacro;
+(d) %macro mymacro;
+(e) &macro mymacro;
+(f) none of the above
+
+***Ans: (d) %macro mymacro;***
+
+####3. Recall the problem from HW3 involving `orion.customer_dim`.
+(a) Use the `PROC FREQ` step below to identity the most abundant level or value of the variable `customer_group`.
+
+    `ods trace on;`\
+    `proc freq data=orion.customer_dim;`\
+    `tables customer_group;`\
+    `run;`
+    
+***Ans: The group of "Orion Club members" is the most abundant group.***
+
+(b) Inspect the log generated upon submission of the code. What is the name of the temporary data set that contains the `One-Way Frequencies` of the `customer_group` variable?
+
+***Ans: The name of the temporary data set that contains the `One_Way Frequencies` of the*** **`customer_group`** ***variable is "Label".***
+
+(c) Add the following statement to the **`PROC FREQ`** step above to generate a data set, named `owf`, with the frequencies of the three customer groups. Use `PROC SORT` so that the first observation in `owf` corresponds to the **most** abundant group. Then use a DATA step (in which no new data set is created) and the `SYMPUTX` routine to create a macro variable called `most` and assign its (data-dependent) value as the name of the most frequent customer group.
+    
+    `ods output onewayfreq=owf;`
+
+***Ans:***
+
+    /*turn on option trace*/
+    ods trace on;
+    
+    /*create a data set that contains the frequency of customer_group*/
+    proc freq data=orion.customer_dim;             
+        table customer_group;                      
+        ods output onewayfreqs=work.owf;
+    run;
+    
+    /*sort data set owf by frequency by descending order*/
+    proc sort data=work.owf;                       
+        by descending frequency;
+    run;
+    
+    /*create a macro variable "most" that contains the most abundant group*/
+    data _null_;                                   
+        set work.owf (obs=1);
+        call symputx("most", customer_group);
+    run;
+
+(d) Using the macro variable you created, use the code below to produce a report of observations from `orion.customer_dim` who come from the most frequent group. It is ok to use `(obs=5)` to limit the report to the first five observations from that group.
+
+    `proc print data=orion.customer_dim (obs=5);`\
+    `where customer_group="&most";`\
+    `title "the most abundant group is &most";`\
+    `var customer_name customer_gender customer_age customer_group;`\
+    `run;`
+
+***Ans:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture.png)
+
+(e) Consider the abbreviated report, but with a title which indicates which group is the most abundant, in ALL CAPS. Give this title statement. (It is okay to use the `%upcase` macro function.)
+
+***Ans:***
+
+    proc print data=orion.customer_dim (obs=5);
+        where customer_group="&most";
+        title "the most abundant group is %upcase(&most)";
+        var customer_name customer_gender customer_age customer_group;
+    run;
+    
+***Output:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture1.png)
+
+(f) Consider the abbreviated report, but with a title which indicates which group is the most abundant, in ALL CAPS followed immediately by three exclamation points. Give this title statement.
+
+***Ans:*** **`title "the most abundant group is %upcase(&most)!!!";`**
+
+(g) (Challenging) Write a SAS program, using a defined macro call `frequent`, in which the user supplies one parameter, which takes one of two values: `most` or `least` and produces a listing of the corresponding list of customers, with an appropriate title. There may be a need for indirect reference to macro variable, including use of the triple ampersand. 
+
+***Ans: Assuming the data set*** **`owf`** ***has been created from*** **`PROC FREQ`** ***and sorted by*** **`Frequency`** ***already.***
+
+    %macro frequent(freq);
+        /*create a macro variable "most" if the argument is "most"*/
+        %if &freq=most %then %do;
+            data _null_;
+                set work.owf (obs=1);
+                call symputx("most", customer_group);
+            run;
+        %end;
+        
+        /*create a macro variable "least" if the argument is "least"*/
+        %else %if &freq=least %then %do;
+            data _null_;
+                set work.owf end=last;
+                call symputx("least", customer_group);
+                if last;
+            run;
+        %end;
+        
+        /*print an ERROR message to log if argument is neither "most" nor "least"*/
+        %else %put WARNING: "&freq" is not a valid argument. This function can only take argument either "most" or "least";
+        
+        /*print the first 5 observations according to the argument*/
+        %if &freq=most or &freq=least %then %do;
+            proc print data=work.owf (obs=5);
+                where customer_group="&&&freq";
+                title "the &freq abundant group is %upcase(&&&freq)";
+                var customer_name customer_gender customer_age customer_group;
+            run;
+        %end;
+        /*if the argument is not valid, then do nothing*/
+        %else;
+    %mend frequent;
+    
+    /*call macro with argument "most" and "least"*/
+    %frequent(most)
+    %frequent(least)
+    %frequent(a)
+
+***Output:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture2.png)
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture3.png)
+
+####4. Consider the `orion.customer` data set.
+(a) Write a program that produces a frequency table giving the number of customers by country, with two separate summaries: one for conutries in the Southern Hemisphere ("Australia" and "South Africa"), one for those is in the Northern Hemisphere. The output should like the table below
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture4.png)
+
+***Ans:***
+
+    proc freq data=orion.customer;
+        where country in ("AU", "ZA");
+        table country;
+        title "Southern Hemisphere";
+    proc freq data=orion.customer;
+        where country not in ("AU", "ZA");
+        table country;
+        title "Northern Hemisphere";
+    run;
+
+(b) Write a macro, call `hemifreq` that will take as an argument the hemisphere of interest and return a table like that given above. The macro must utilize the `IN` operator. It should also allow the southern hemisphere to be a user-supplied argument that can be "`s`", "`south`" or "`southern`" and can be upper or lower case or some combination. Similarly for the other hemisphere. If some other values is supplied, the macro should send an appropriate ERROR message to the log. No matter which version of "southern" is suppied, the title printed should appear as above, and similarly for "northern". This code is to help get you started;
+
+    `%macro hemifreq(hemi);`\
+    `%let hemi=%upcase(?);`\
+    `if &hemi in ??? %then %do; *(your statement); %end;`\
+    `%else %if &hemi in ??? %then %do; *(your statements); %end;`\
+    `%else %do; *handle the invalid parameter error; %end;`\
+    `(more code)`\
+    `%mend hemifreq;`
+    
+***Ans:***
+
+    /*turn on options for macro "in" operator and set delimiter to comma*/
+    options minoperator mindelimiter=',';
+    
+    /*create a macro function that can print a summary of frequency according to its argument*/
+    %macro hemifreq(hemi);
+    
+        /*assign a new macro that contains value of upper case of the argument*/
+        %let hemi1=%upcase(&hemi);
+        
+        /*create proc freq report according to its argument*/
+        %if &hemi1 in (S, SOUTH, SOUTHERN) %then %do; 
+            proc freq data=orion.customer;
+                where country in ("AU", "ZA");
+                table country;
+                title "Southern Hemisphere";
+            run;
+        %end;
+        %else %if &hemi1 in (N, NORTH, NORTHERN) %then %do; 
+            proc freq data=orion.customer;
+                where country not in ("AU", "ZA");
+                table country;
+                title "Northern Hemisphere";
+            run;
+        %end;
+        
+        /*send an error message to the log if the argument is invalid*/
+        %else %put ERROR: Invalid argument of "&hemi";
+    %mend hemifreq;
+
+(c) As you code, use the MCOMPILENOTE=ALL to ensure that the macro compiles. Once it compiles, include here the note to that effect that appears here in the SAS log.
+
+***Ans:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture5.png)
+
+(d) Call the macro three times, using the arguments `SOUTHERN`, `n`, and `western`. Copy the SAS Listing here.
+
+***Ans:***
+
+    %hemifreq(SOUTHERN)
+    %hemifreq(n)
+    %hemifreq(western)
+    
+***Output:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture6.png)
+
+***Log:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture7.png)
+
+(e) As you code, consider using the MLOGIC option. The MLOGIC should send messages for the result of every `%IF %THEN` condition to the SAS Log. After your program runs, copy them here.
+
+***Ans:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture8.png)
+
+(f) What is the name of the option you can use to get the SAS code produced by your `hemifreq` macro to be writtten to the SAS Log? Use it, and include the relevant messages here.
+
+***Ans:*** **`options mprint;`**
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture9.png)
+
+####5. Run the code below to create a data set called "NC" and some macro variables to go along.
+
+    options ls=75 nocenter mlogic;
+    data one;
+        length county $20 city $20;
+        input county_id county $ city_id city $ popn income;
+        call symputx("county"||left(county_id), county);
+        call symputx("city"||left(city_id), city);
+        datalines;
+    1 Wake 1 Raleigh 404 32.6
+    1 Wake 2 Cary 135 32.6
+    2 Mecklenburg 3 Charlotte 731 31.8
+    2 Mecklenburg 4 Davidson 11 31.8
+    ;
+    run;
+    
+(a) Use `PROC MEANS` with a `BY` statement to report the mean population size (in thousands) and per-capita income (in thousands) separately for each county.
+
+***Ans:***
+
+    proc sort data=work.one out=work.NC;
+        by county;
+    proc means data=work.NC mean maxdec=2;
+        by county;
+        var popn income;
+    run;
+    
+***Output:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture10.png)
+
+(b) Use indirect macro variable references to complete the macro below so that it produces a county report with the name of the county in the title.
+
+    `%macro countysum(id);`\
+    `proc means data=one;`\
+    `title "report for county=(you supply this code)"`\
+    `where county="(you supply this code)";`\
+    `var popn income;`\
+    `run;`\
+    `%mend countysum;`
+    
+***Ans:***
+
+    %macro countysum(id);
+        %if &id=1 %then %let id=Wake;
+        %else %if &id=2 %then %let id=Mecklenburg;
+        %else %put ERROR: &id is an invalid county id;
+        proc means data=one mean maxdec=2;
+            title "report for county=&id";
+            where county="&id";
+            var popn income;
+        run;
+    %mend countysum;
+
+(c) Call the macro once for each county code. Report the results, whose numerical summaries should agree with part(a).
+
+    `%county(1)`\
+    `%county(2)`
+    
+***Ans:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture11.png)
+
+(d) (Challenging) Write a macro called `munisum` that has two parameters, `mtype` and `id`. The first parameter can take as valid values either `county` or `city`.
+
+    `%macro munisum;`\
+    `proc means data=one;`\
+        `title "&mtype report";`\
+        `title2 "(you supply)";`\
+        `where (you supply);`\
+        `var popn income;`\
+    `run;`\
+    `%mend munisum;`
+    
+***Ans:***
+
+    options minoperator mindelimiter=','; 
+    %macro munisum(mtype, id);
+        %if not (&mtype in (city, county)) %then %do;
+            %put ERROR: &mtype is an invalid argument;
+            %abort;
+        %end;
+        %else %if (&mtype = county) and (&id in (3, 4)) %then %do;
+            %put ERROR: &mtype does not have id=&id;
+            %abort;
+        %end;
+        %if not (&id in (1,2,3,4)) %then %do;
+            %put ERROR: &id is an invalid number;
+            %abort;
+        %end;
+        proc means data=one mean maxdec=2;
+            title "%sysfunc(propcase(&mtype)) Report";
+            title2 "Average Population & Per-Capita Income";
+            where &mtype._id=&id;
+            var popn income;
+        run;
+    %mend munisum;
+
+(e) Call the new macro for each county and for each city, for a total of 4 calls. Report the results.
+
+    `%munisum(county, 1);`\
+    `%munisum(county, 2);`\
+    `%munisum(city, 1);`
+    
+***Ans:***
+
+![Caption for the picture](C:/Users/u213493/Desktop/NC_State/ST556/HW4/Capture12.png)
+
+####6. What does SQL abbreviate?\
+
+***Ans: Structured Query Language.***
+
+####7. Consider the `orion.employee_payroll` data file.
+(a) What is the name of this kind of object using the language of SQL?
+
+***Ans: A table.***
+
+(b) Write `PROC SQL` code that displays all of the contents of `orion.employee_payroll`.
+
+***Ans:***
+
+    proc sql;
+        select * from orion.employee_payroll;
+    quit;
+
+(c) Modify the code from part(b) so that the only information displayed is `gender`, `marital status` and `salary` of the employees.
+
+***Ans:***
+
+    proc sql;
+        select employee_gender "Gender", marital_status, salary
+            from orion.employee_payroll;
+    quit;
+
+(d) What is the SQL word to describe items like three requested in part(c).
+
+***Ans:*** **`DESCRIBE table`** ***table name***
+
+(e) What is the action performed in part(b) called, in the language of `PROC SQL`?
+
+***Ans: Querying.***
+
+(f) Modify the code so that the salary information is displayed with appropriate units (samoleans).
+
+***Ans:***
+
+    proc sql;
+        select employee_gender "Gender", marital_status, salary format=dollar8.
+            from orion.employee_payroll;
+    quit;
+
+(g) Calculate a new column that is equal to 0.25 multiplied by the value of the salary column. Display it using appropriate units and with a header that reads "Tax".
+
+***Ans:***
+
+    proc sql;
+        select employee_gender "Gender", marital_status, salary format=dollar8.,
+            salary*0.25 as Tax format=dollar8.
+            from orion.employee_payroll;
+    quit;
+
+(h) Create a table called "males" that contains columns for employee id, marital status, salary and tax that is comprised only of males.
+
+***Ans:***
+
+    proc sql;
+        create table work.males as
+        select employee_id, marital_status,
+               salary format=dollar8., salary*0.25 as Tax format=dollar8.
+            from orion.employee_payroll
+        where employee_gender = "M";
+    quit;
+    
